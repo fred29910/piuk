@@ -1,0 +1,21 @@
+{
+  "name": "my-wasm-sdk",
+  "version": "0.1.0",
+  "description": "A Go Wasm SDK generated from an OpenAPI specification.",
+  "main": "dist/lib.wasm",
+  "types": "dist/lib.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "./build.sh"
+  },
+  "keywords": [
+    "wasm",
+    "go",
+    "openapi",
+    "sdk"
+  ],
+  "author": "",
+  "license": "UNLICENSED"
+}
