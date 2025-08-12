@@ -9,6 +9,9 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
+# for the binary install
+go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@latest
+
 # --- 步骤 1: 环境检查 ---
 echo -e "${GREEN}Step 1: Checking for required tools...${NC}"
 command -v openapi-generator-cli >/dev/null 2>&1 || { echo -e >&2 "${RED}Error: openapi-generator-cli is not installed. Please install it first.${NC}"; exit 1; }
@@ -23,28 +26,39 @@ echo "Cleaned 'dist' and 'build' directories."
 
 # --- 步骤 3: (可选) 重新生成 Go API 客户端 ---
 # 取消下面的注释，以便在每次构建时都从 openapi.yaml 重新生成 goapi
-# echo -e "\n${GREEN}Step 3: Regenerating Go API client...${NC}"
+if [ ! -e "goapi/go.mod" ]; then 
+    go mod init github.com/fred29910/goapi
+fi 
+echo -e "\n${GREEN}Step 3: Regenerating Go API client...${NC}"
+# find goapi -mindepth 1 -maxdepth 1 ! -name goapi_wasm -exec rm -rf {} +
 # openapi-generator-cli generate \
 #   -i ./openapi.yaml \
 #   -g go \
+#   --git-user-id "fred29910" \
+#   --git-repo-id "goapi" \
 #   -o ./goapi
-# echo "Go client regenerated in ./goapi."
+rm goapi/client.gen.go
+rm goapi/types.gen.go
+
+oapi-codegen --generate types -o goapi/types.gen.go -package api openapi.yaml
+oapi-codegen --generate client -o goapi/client.gen.go -package api openapi.yaml
+
+echo "Go client regenerated in ./goapi."
 
 # --- 步骤 4: 编译 Wasm ---
 echo -e "\n${GREEN}Step 4: Compiling Go code to Wasm...${NC}"
 # 注意：我们需要进入 goapi_wasm 目录来编译，因为它可能需要自己的 go.mod
 # 为了简单起见，我们假设它能直接找到上级 goapi 模块
 (cd goapi && go mod tidy)
-tinygo build -o ../dist/lib.wasm -target wasm ./goapi_wasm/main.go
+(cd goapi && tinygo build -o ../dist/lib.wasm -target wasm ./goapi_wasm/main.go)
+echo "${pwd}"
+# (cd goapi && GOOS=js GOARCH=wasm go build -o ../dist/lib.wasm ./goapi_wasm)
+cp "$(go env GOROOT)/misc/wasm/wasm_exec.js" ./dist/
 echo -e "Wasm binary saved to ${YELLOW}dist/lib.wasm${NC}"
 
 # --- 步骤 5: 生成 TypeScript 声明 ---
 echo -e "\n${GREEN}Step 5: Generating TypeScript types...${NC}"
-openapi-generator-cli generate \
-  -i ./openapi.yaml \
-  -g typescript-fetch \
-  --type-mappings=object=any \
-  -o ./build/tsapi
+yarn gen_ts
 echo "TypeScript types generated in ./build/tsapi."
 
 # --- 步骤 6: 组装最终的 .d.ts ---

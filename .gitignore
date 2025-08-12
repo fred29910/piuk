@@ -1,1 +1,4 @@
 goapi
+
+node_modules
+!goapi/goapi_wasm

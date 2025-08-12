@@ -1,14 +1,13 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"syscall/js"
 
-	"github.com/GIT_USER_ID/GIT_REPO_ID/goapi" // 使用 go.mod 中的模块路径
+	goapi "github.com/fred29910/goapi" // 使用 go.mod 中的模块路径
 )
 
-var apiClient *goapi.APIClient
+var apiClient *goapi.Client
 
 // initAPI 用于初始化 API 客户端，它会被暴露给 JavaScript。
 func initAPI(this js.Value, args []js.Value) any {
@@ -22,12 +21,13 @@ func initAPI(this js.Value, args []js.Value) any {
 		}))
 	}
 	baseURL := args[0].String()
-	
 	// 配置并创建 API 客户端实例
-	cfg := goapi.NewConfiguration()
-	cfg.Servers = goapi.ServerConfigurations{{URL: baseURL}}
-	apiClient = goapi.NewAPIClient(cfg)
-	
+	var err error
+	apiClient, err = goapi.NewClient(baseURL)
+
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -55,18 +55,18 @@ func getUser(this js.Value, args []js.Value) any {
 			// 假设存在一个名为 UserApi 的 API (请根据您的 openapi.yaml 修改)
 			// 并且它有一个 GetUserById 方法
 			// user, _, err := apiClient.UserApi.GetUserById(context.Background(), id).Execute()
-			
+
 			// 由于我们不确定实际的 API 结构，这里我们使用一个模拟的成功响应
 			// 请根据您 goapi 中的实际情况替换下面的代码
 			mockUser := map[string]string{"id": id, "name": "Mock User"}
 			b, err := json.Marshal(mockUser)
-			
+
 			if err != nil {
 				// 如果发生错误，将错误信息序列化为 JSON 字符串
 				reject.Invoke(js.Global().Get("Error").New("Failed to marshal mock user: " + err.Error()))
 				return
 			}
-			
+
 			// 成功后，将返回的用户数据序列化为 JSON 字符串
 			resolve.Invoke(string(b))
 		}()
@@ -78,7 +78,7 @@ func main() {
 	// 将 Go 函数注册到全局作用域 (window)，以便 JavaScript 调用
 	js.Global().Set("initAPI", js.FuncOf(initAPI))
 	js.Global().Set("getUser", js.FuncOf(getUser))
-	
+
 	// 保持 Go 程序运行，等待 JavaScript 的调用
 	c := make(chan struct{}, 0)
 	<-c
