@@ -9,7 +9,9 @@
   ],
   "scripts": {
     "build": "./build.sh",
-    "gen_ts":"npx openapi --input ./openapi.yaml --output ./build --client fetch"
+    "gen_ts":"npx openapi --input ./openapi.yaml --output ./build --client fetch",
+    "gen_swg":"npx swagger-typescript-api generate --path ./openapi.yaml --another-array-type --clean-output --output=./src --sort-types --sort-routes --name=Api.ts"
+
   },
   "keywords": [
     "wasm",
